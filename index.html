@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI HOT 日报 · 每日 AI 资讯</title>
+<style>
+  :root {
+    --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.12);
+    --shadow-hover: 0 8px 40px rgba(0,0,0,0.2);
+    --card-bg: rgba(255,255,255,0.18);
+    --card-border: rgba(255,255,255,0.3);
+    --text-main: #1a1a2e;
+    --text-sub: rgba(255,255,255,0.75);
+    --text-card: #1e293b;
+    --text-card-sub: #64748b;
+    --chip-bg: rgba(255,255,255,0.25);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background 2s ease;
+  }
+
+  /* ===== 时间背景主题（渐变色由 JS 根据日出日落+天气动态计算） ===== */
+  body { background: #0a0a2e; }
+
+  /* ===== 星星效果（夜间） —— 与V1完全一致 ===== */
+  .stars { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+  body.night .stars { display: block; }
+  .star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--dur, 3s) ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.4); }
+  }
+
+  /* ===== 月亮（夜间） —— SVG 亮部月相 ===== */
+  .moon { display: none; position: fixed; z-index: 0; pointer-events: none; }
+  body.night .moon { display: block; }
+  .moon svg {
+    width: 70px; height: 70px;
+    overflow: visible;
+  }
+
+  /* ===== 云朵效果（白天） —— 棉絮状积云 ===== */
+  .clouds { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 180px; pointer-events: none; z-index: 0; overflow: hidden; }
+  body.day .clouds { display: block; }
+  .cloud-cluster {
+    position: absolute;
+    animation: cloudDrift linear infinite;
+    opacity: 0.85;
+  }
+  .cloud-bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95), rgba(240,245,250,0.75) 60%, rgba(220,230,240,0.5));
+    box-shadow: 0 0 8px rgba(255,255,255,0.2);
+  }
+  @keyframes cloudDrift {
+    from { transform: translateX(-300px); }
+    to { transform: translateX(calc(100vw + 300px)); }
+  }
+
+  /* ===== 主容器 ===== */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    text-align: center;
+    padding: 48px 20px 36px;
+    color: white;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 30px;
+    padding: 6px 16px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 20px;
+    letter-spacing: 0.5px;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 6vw, 48px);
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.2);
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .hero-date {
+    font-size: 15px;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 28px;
+  }
+  .hero-greeting {
+    font-size: 17px;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 32px;
+    line-height: 1.6;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* 总计统计 */
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+  .stat-pill {
+    background: rgba(255,255,255,0.22);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 50px;
+    padding: 10px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 90px;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .stat-pill:hover {
+    transform: translateY(-2px);
+    background: rgba(255,255,255,0.3);
+  }
+  .stat-num {
+    font-size: 22px;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+    margin-top: 3px;
+    white-space: nowrap;
+  }
+
+  /* ===== 锚点导航 ===== */
+  .nav-bar {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 0 16px 32px;
+  }
+  .nav-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 30px;
+    padding: 7px 14px;
+    font-size: 13px;
+    color: white;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .nav-chip:hover {
+    background: rgba(255,255,255,0.35);
+    transform: translateY(-1px);
+  }
+  .nav-chip .count-badge {
+    background: rgba(255,255,255,0.3);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ===== 版块标题 ===== */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 40px 0 18px;
+    color: white;
+  }
+  .section-icon {
+    font-size: 22px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  }
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  }
+  .section-count {
+    background: rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+    font-weight: 600;
+  }
+  .section-divider {
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.2);
+  }
+
+  /* ===== 卡片网格 ===== */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  /* ===== 卡片 ===== */
+  .card {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,0.5);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    transition: transform 0.3s cubic-bezier(.34,1.56,.64,1), box-shadow 0.3s;
+    opacity: 0;
+    transform: translateY(24px);
+    will-change: transform, opacity;
+  }
+  .card.visible {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.34,1.56,.64,1);
+  }
+  .card:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: var(--shadow-hover);
+  }
+
+  /* 卡片内容 */
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .card-num {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+  }
+  .card-source-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    border-radius: 20px;
+    padding: 3px 9px;
+    font-size: 11px;
+    color: #64748b;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-card);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .card-time {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .card-summary {
+    font-size: 13px;
+    color: var(--text-card-sub);
+    line-height: 1.6;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .card-link:hover {
+    opacity: 0.9;
+    transform: scale(1.04);
+  }
+
+  /* 标记为"与我相关"的卡片 */
+  .card.relevant {
+    border-left: 3px solid #667eea;
+  }
+  .relevant-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+    border: 1px solid #667eea40;
+    border-radius: 20px;
+    padding: 2px 9px;
+    font-size: 11px;
+    color: #667eea;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  /* ===== 加载状态 ===== */
+  .loading-spinner {
+    width: 36px; height: 36px;
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-state { text-align: center; padding: 60px 20px; color: rgba(255,255,255,0.7); }
+  .error-state .error-icon { font-size: 38px; margin-bottom: 12px; }
+  .retry-btn {
+    display: inline-block; margin-top: 14px;
+    background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 20px; padding: 8px 20px; color: white; font-size: 13px;
+    cursor: pointer; text-decoration: none;
+  }
+  .retry-btn:hover { background: rgba(255,255,255,0.35); }
+
+  /* ===== 页脚 ===== */
+  .footer {
+    text-align: center;
+    padding: 32px 16px 16px;
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .footer a {
+    color: rgba(255,255,255,0.8);
+    text-decoration: underline;
+  }
+
+  /* ===== 空状态 ===== */
+  .empty-section {
+    background: rgba(255,255,255,0.1);
+    border: 1px dashed rgba(255,255,255,0.3);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+  }
+
+  /* ===== 滚动条 ===== */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+
+  /* ===== 响应式 ===== */
+  @media (max-width: 600px) {
+    .cards-grid { grid-template-columns: 1fr; }
+    .hero { padding: 32px 16px 24px; }
+    .stat-pill { min-width: 70px; padding: 8px 12px; }
+    .stat-num { font-size: 18px; }
+    .moon svg { width: 52px; height: 52px; }
+    .moon { top: 90px !important; right: 12px !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 背景装饰层（与V1结构一致） -->
+<div class="stars" id="starsContainer"></div>
+
+<!-- 月亮（SVG 真实月相） -->
+<div class="moon" id="moonEl">
+  <svg id="moonSvg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <!-- 月面基底渐变：银白微暖 -->
+      <radialGradient id="moonFace" cx="35%" cy="35%" r="65%">
+        <stop offset="0%" stop-color="#fffef8"/>
+        <stop offset="40%" stop-color="#f5ecd7"/>
+        <stop offset="75%" stop-color="#e8dcc8"/>
+        <stop offset="100%" stop-color="#d4c4a8"/>
+      </radialGradient>
+      <!-- 暗面：半透明深蓝，让夜空微微透过来 -->
+      <radialGradient id="moonDarkGrad" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="rgba(10,10,46,0.82)"/>
+        <stop offset="60%" stop-color="rgba(15,33,62,0.88)"/>
+        <stop offset="100%" stop-color="rgba(22,33,62,0.92)"/>
+      </radialGradient>
+      <!-- 亮部光晕：只包围实际亮部形状 -->
+      <filter id="litGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="4" result="blur"/>
+        <feMerge>
+          <feMergeNode in="blur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+      <!-- 动态 clipPath：引用亮部 path，限制环形山只在亮部显示 -->
+      <clipPath id="litClip">
+        <path id="moonLitClipPath" d=""/>
+      </clipPath>
+    </defs>
+
+    <!-- 亮部月面（由 JS 动态生成 path，暗部完全透明） -->
+    <path id="moonLitPath" fill="url(#moonFace)" filter="url(#litGlow)"/>
+
+    <!-- 环形山纹理（用 clip-path 限制在亮部内） -->
+    <g clip-path="url(#litClip)" opacity="0.35" style="pointer-events:none;">
+      <!-- 大环形山 -->
+      <ellipse cx="32" cy="38" rx="10" ry="8" fill="#c4b49a" opacity="0.6"/>
+      <ellipse cx="32" cy="38" rx="7" ry="5" fill="#b0a084" opacity="0.4"/>
+      <!-- 中环形山 -->
+      <ellipse cx="58" cy="28" rx="7" ry="6" fill="#c4b49a" opacity="0.5"/>
+      <ellipse cx="58" cy="28" rx="4" ry="3" fill="#b0a084" opacity="0.3"/>
+      <!-- 中环形山2 -->
+      <ellipse cx="65" cy="55" rx="8" ry="7" fill="#c4b49a" opacity="0.55"/>
+      <ellipse cx="65" cy="55" rx="5" ry="4" fill="#b0a084" opacity="0.35"/>
+      <!-- 小环形山 -->
+      <ellipse cx="28" cy="62" rx="5" ry="4" fill="#c4b49a" opacity="0.5"/>
+      <ellipse cx="45" cy="72" rx="6" ry="5" fill="#c4b49a" opacity="0.45"/>
+      <ellipse cx="72" cy="40" rx="4" ry="3.5" fill="#c4b49a" opacity="0.4"/>
+      <ellipse cx="38" cy="50" rx="3" ry="2.5" fill="#c4b49a" opacity="0.35"/>
+      <!-- 月海暗斑 -->
+      <ellipse cx="42" cy="45" rx="18" ry="14" fill="#c8b89e" opacity="0.15"/>
+      <ellipse cx="60" cy="58" rx="14" ry="10" fill="#c8b89e" opacity="0.12"/>
+    </g>
+  </svg>
+</div>
+
+<div class="clouds" id="cloudsContainer"></div>
+
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">
+      <span id="timeIcon">☀️</span>
+      <span id="timePeriodLabel">加载中...</span>
+      &nbsp;·&nbsp; AI HOT 日报
+    </div>
+    <h1>今日 AI 资讯速览</h1>
+    <div class="hero-date" id="heroDate">—</div>
+    <div class="hero-greeting" id="heroGreeting"><span class="loading-spinner"></span><br>正在获取今日 AI 日报...</div>
+
+    <!-- 版块统计 -->
+    <div class="hero-stats" id="heroStats">
+      <div class="stat-pill">
+        <span class="stat-num" id="count-total">—</span>
+        <span class="stat-label">📊 总条数</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-num" id="count-model">0</span>
+        <span class="stat-label">🤖 模型更新</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-num" id="count-product">0</span>
+        <span class="stat-label">📦 产品发布</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-num" id="count-industry">0</span>
+        <span class="stat-label">🏭 行业动态</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-num" id="count-paper">0</span>
+        <span class="stat-label">📄 论文研究</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-num" id="count-tip">0</span>
+        <span class="stat-label">💡 技巧观点</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 锚点导航 -->
+  <nav class="nav-bar" id="navBar"></nav>
+
+  <!-- 动态内容区 -->
+  <div id="contentArea"></div>
+
+  <!-- 页脚 -->
+  <footer class="footer" id="footer"></footer>
+
+</div>
+
+<script type="application/json" id="embeddedData">{"date":"2026-05-26","generatedAt":"2026-05-26T00:00:00.322Z","windowStart":"2026-05-25T00:00:00.000Z","windowEnd":"2026-05-26T00:00:00.000Z","lead":null,"sections":[{"label":"模型发布/更新","items":[{"title":"谷歌 Gemini 2.5 Flash 预览版发布，支持图像输入与文本输出，定价0.15/0.60刀","summary":"Google 发布 Gemini 2.5 Flash Preview。现已在 Android Studio、AI Studio 及 Gemini API 中可用。定价$0.15/$0.60每百万token。","sourceUrl":"https://x.com/GeminiApp/status/1929014573521580041","sourceName":"Google","publishedAt":"2026-05-24T15:38:00.000Z","category":"ai-models"}]},{"label":"产品发布/更新","items":[{"title":"Luma Agents 实现规模化真实 UGC 广告生成","summary":"规模化的真实性曾是矛盾，如今已成现实。 定义简报，设定风格，Luma Agents 从这里构建每一条 UGC 风格广告。 让它真实 → http://lumalabs.ai/app","sourceUrl":"https://x.com/LumaLabsAI/status/1929088763537731835","sourceName":"Luma AI","publishedAt":"2026-05-24T15:38:00.000Z","category":"ai-products"},{"title":"Windsurf Wavelens 发布：Wave 2.0 升级全新体验设计","summary":"Wavelens 重新定义 Wave 的底层交互模型，为 AI IDE 探索新的交互模式 https://windsurf.com","sourceUrl":"https://x.com/windsurf_ai/status/1928795948108673444","sourceName":"Windsurf","publishedAt":"2026-05-24T15:38:00.000Z","category":"ai-products"}]},{"label":"行业动态","items":[{"title":"普华永道组建 3000 人 AI 法律顾问团队，并设立 Agentic 法律部门","summary":"PwC UK 宣布组建 3000 人的 AI 法律团队，表示将重点投资 Agentic AI 应用、合同智能分析，并启用新成立的 Agentic Legal 部门。","sourceUrl":"https://x.com/rowancheung/status/1929069580682543240","sourceName":"Rowan Cheung","publishedAt":"2026-05-25T15:38:00.000Z","category":"industry"},{"title":"Stripe 支付系统接入 Claude 实现智能支付对话代理","summary":"Stripe 官方宣布接入 Claude，推出 AI 支付客服代理，可自动处理退款、查询账户余额、识别付款失败原因，并执行操作。","sourceUrl":"https://x.com/Stripe/status/1928877227051831800","sourceName":"Stripe","publishedAt":"2026-05-24T15:38:00.000Z","category":"industry"},{"title":"字节跳动推出 AI 全流程广告生成系统 'Jimeng'","summary":"JIMENG 可以根据目标用户画像、品牌调性和市场趋势，自动生成完整广告方案，包括视觉设计、文案创作和投放策略。","sourceUrl":"https://x.com/anon_overflow/status/1928863591520518532","sourceName":"匿名者","publishedAt":"2026-05-24T15:38:00.000Z","category":"industry"},{"title":"Anysphere (Cursor) 完成 3亿美元B轮融资","summary":"AI 编程工具 Cursor 的母公司 Anysphere 完成 3亿美元B轮融资，估值超 20亿美元，这家15人团队正在重新定义 AI 编程工具。","sourceUrl":"https://x.com/rakyll/status/1928749211063447867","sourceName":"Jaana Dogan","publishedAt":"2026-05-24T15:38:00.000Z","category":"industry"}]},{"label":"论文研究","items":[{"title":"DeepSeek R1-0522: 推理模型的持续演进","summary":"DeepSeek 发布了 R1-0522 推理模型服务，继续完善其推理能力。公司内部持续改进，但发布节奏趋向稳定。","sourceUrl":"https://x.com/deepseek_ai/status/1929085640896778773","sourceName":"DeepSeek","publishedAt":"2026-05-25T15:38:00.000Z","category":"paper"},{"title":"CLUE 发布 SuperCLUE-Open：首款国内安全对齐评测数据集","summary":"CLUE 发布 SuperCLUE-Open 安全对齐评测数据集，涵盖开放性、价值观、安全性等多维度的评估体系。","sourceUrl":"https://x.com/CLUEbenchmark/status/1929031024440840557","sourceName":"CLUE","publishedAt":"2026-05-24T15:38:00.000Z","category":"paper"}]},{"label":"技巧与观点","items":[{"title":"Gorq 集成 DeepSeek、Google、Mistral 模型，开发者可免费调用","summary":"开发者可通过 Gorq API 同时调用多个模型进行对比测试或路由，目前免费使用，无需付费。","sourceUrl":"https://x.com/official_gorq/status/1929091152320876726","sourceName":"Gorq","publishedAt":"2026-05-25T15:38:00.000Z","category":"tip"},{"title":"AI 编码工具对比：Claude Code、Gemini CLI、Aider 和 Cursor","summary":"开发者对比了 Claude Code v1、Gemini CLI、Aider 和 Cursor，发现 Claude Code 的 claude-swoole-4.5 模型在复杂任务中表现最佳。","sourceUrl":"https://notes.whatthezog.com/experiments-with-command-line-coding-tools/","sourceName":"What The Zog","publishedAt":"2026-05-24T15:38:00.000Z","category":"tip"}]}],"flashes":[]}</script>
+
+<script>
+// ============================================================
+//  月相系统 — SVG 真实月相渲染
+// ============================================================
+
+function calcMoonPhase(date) {
+  const knownNewMoon = 2451550.1;
+  const synodic = 29.53058867;
+  const jd = date.getTime() / 86400000 + 2440587.5;
+  return ((jd - knownNewMoon) % synodic) / synodic;
+}
+
+const MOON_NAMES = ['🌑 新月','🌒 蛾眉月','🌓 上弦月','🌔 盈凸月','🌕 满月','🌖 亏凸月','🌗 下弦月','🌘 残月'];
+function getMoonName(phase) {
+  return MOON_NAMES[Math.floor((phase % 1) * 8) % 8];
+}
+
+/**
+ * SVG 亮部月相渲染 — 正确的几何算法
+ * 核心：只画亮部，暗部完全透明
+ * 亮部形状 = 外侧大圆弧（半径r） + 内侧小圆弧（半径根据月相变化）
+ * phase: 0=新月, 0.25=上弦(右半边亮), 0.5=满月, 0.75=下弦(左半边亮)
+ */
+function setMoonPhase(phase) {
+  const litPath = document.getElementById('moonLitPath');
+  const clipPath = document.getElementById('moonLitClipPath');
+  if (!litPath) return;
+
+  const p = phase % 1;
+  const cx = 50, cy = 50, r = 46;
+
+  // 椭圆终止线算法
+  // 月相亮部 = 外侧月球圆弧 + 内侧明暗交界椭圆弧
+  // 半长轴 = r, 半短轴 = |cos(2π·phase)| × r
+
+  let d = '';
+
+  if (p < 0.002 || p > 0.998) {
+    // 新月：不显示
+    d = '';
+  } else if (Math.abs(p - 0.5) < 0.002) {
+    // 满月：完整圆
+    d = `M ${cx} ${cy-r} A ${r} ${r} 0 1 1 ${cx} ${cy+r} A ${r} ${r} 0 1 1 ${cx} ${cy-r} Z`;
+  } else {
+    const cosPhase = Math.cos(2 * Math.PI * p);
+    const minor = Math.abs(cosPhase) * r;  // 椭圆终止线的半短轴
+    const waxing = p < 0.5;
+
+    // 外侧弧（月球边缘）：从顶部到底部
+    //   waxing（亮面右）：sweep=1 → 右半圆
+    //   waning（亮面左）：sweep=0 → 左半圆
+    const outerSweep = waxing ? 1 : 0;
+
+    // 内侧弧（终止线椭圆）：从底部回顶部
+    //   cosPhase < 0 时，椭圆弧方向与外侧相反
+    //   cosPhase > 0 时，椭圆弧方向与外侧相同
+    const innerSweep = cosPhase < 0 ? 1 : 0;
+
+    d = `M ${cx} ${cy-r}` +
+        ` A ${r} ${r} 0 0 ${outerSweep} ${cx} ${cy+r}` +
+        ` A ${minor.toFixed(2)} ${r} 0 0 ${innerSweep} ${cx} ${cy-r} Z`;
+  }
+
+  litPath.setAttribute('d', d);
+
+  // 同步更新 clipPath（限制环形山只在亮部显示）
+  if (clipPath) {
+    clipPath.setAttribute('d', d);
+  }
+
+  // 月亮位置微调
+  const moonEl = document.getElementById('moonEl');
+  const angle = p * Math.PI * 0.4 - 0.15;
+  moonEl.style.top = (55 + Math.sin(angle) * 25) + 'px';
+  moonEl.style.right = (35 + Math.cos(angle) * 20) + 'px';
+}
+
+// ============================================================
+//  北京时间工具
+// ============================================================
+function getBJ() {
+  const now = new Date();
+  const bj = new Date(now.getTime() + 8 * 3600000);
+  const weekdays = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+  return {
+    now, bj,
+    y: bj.getUTCFullYear(), m: bj.getUTCMonth()+1, d: bj.getUTCDate(),
+    h: bj.getUTCHours(), min: bj.getUTCMinutes(),
+    wd: weekdays[bj.getUTCDay()],
+    isoDate: `${bj.getUTCFullYear()}-${String(bj.getUTCMonth()+1).padStart(2,'0')}-${String(bj.getUTCDate()).padStart(2,'0')}`,
+    yesterday() {
+      const d = new Date(this.now.getTime() + 8*3600000 - 86400000);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+    }
+  };
+}
+
+// ============================================================
+//  太阳位置计算（NOAA 算法简化版）
+// ============================================================
+
+const MY_LAT = 23.08;   // 广东惠州纬度
+const MY_LNG = 114.42;  // 广东惠州经度
+
+function toRad(d) { return d * Math.PI / 180; }
+function toDeg(r) { return r * 180 / Math.PI; }
+
+/** 计算太阳高度角（度），负值=地平线以下 */
+function calcSolarElevation(lat, lng, date) {
+  const jd = date.getTime() / 86400000 + 2440587.5;
+  const n = jd - 2451545.0;
+  const L = (280.460 + 0.9856474 * n) % 360;
+  const g = (357.528 + 0.9856003 * n) % 360;
+  const lambda = L + 1.915 * Math.sin(toRad(g)) + 0.020 * Math.sin(toRad(2 * g));
+  const epsilon = 23.439 - 0.0000004 * n;
+  const decl = toDeg(Math.asin(Math.sin(toRad(epsilon)) * Math.sin(toRad(lambda))));
+  const gmst = (280.46061837 + 360.98564736629 * n) % 360;
+  const lst = (gmst + lng) % 360;
+  const ha = ((lst - lambda) + 180) % 360 - 180;
+  return toDeg(Math.asin(
+    Math.sin(toRad(lat)) * Math.sin(toRad(decl)) +
+    Math.cos(toRad(lat)) * Math.cos(toRad(decl)) * Math.cos(toRad(ha))
+  ));
+}
+
+// ============================================================
+//  颜色插值
+// ============================================================
+function lerpColor(a, b, t) {
+  const ah = parseInt(a.slice(1), 16), bh = parseInt(b.slice(1), 16);
+  const ar = ah >> 16, ag = (ah >> 8) & 0xff, ab = ah & 0xff;
+  const br = bh >> 16, bg = (bh >> 8) & 0xff, bb = bh & 0xff;
+  return '#' + ((1 << 24) + (Math.round(ar + (br - ar) * t) << 16) +
+         (Math.round(ag + (bg - ag) * t) << 8) + Math.round(ab + (bb - ab) * t)).toString(16).slice(1);
+}
+
+// ============================================================
+//  动态天空渐变（基于太阳高度角 + 天气代码）
+// ============================================================
+function computeSkyGradient(elev, wcode) {
+  let top, mid, bottom;
+  if (elev < -15) {
+    top = '#0a0a2e'; mid = '#0a0a2e'; bottom = '#0a0a2e';
+  } else if (elev < -7) {
+    const t = (elev + 15) / 8;
+    top = lerpColor('#0a0a2e', '#12103e', t);
+    mid = lerpColor('#0a0a2e', '#1a1a4e', t);
+    bottom = lerpColor('#0a0a2e', '#2a2060', t);
+  } else if (elev < -2) {
+    const t = (elev + 7) / 5;
+    top = lerpColor('#12103e', '#1a1a5e', t);
+    mid = lerpColor('#1a1a4e', '#2a3a7e', t);
+    bottom = lerpColor('#2a2060', '#4a5a9e', t);
+  } else if (elev < 3) {
+    const t = (elev + 2) / 5;
+    top = lerpColor('#1a1a5e', '#3a206a', t);
+    mid = lerpColor('#2a3a7e', '#c85a3e', t);
+    bottom = lerpColor('#d46a3e', '#f4a261', t);
+  } else if (elev < 10) {
+    const t = (elev - 3) / 7;
+    top = lerpColor('#3a206a', '#8ab8e8', t);
+    mid = lerpColor('#c85a3e', '#b0d8f0', t);
+    bottom = lerpColor('#f4a261', '#eef6fe', t);
+  } else if (elev < 30) {
+    const t = (elev - 10) / 20;
+    top = lerpColor('#8ab8e8', '#a0c8f0', t);
+    mid = lerpColor('#b0d8f0', '#cce0f5', t);
+    bottom = lerpColor('#d0e8f5', '#eef6fe', t);
+  } else {
+    top = '#8ab8e8'; mid = '#c0ddf5'; bottom = '#eef6fe';
+  }
+  // 天气调色（WS=0晴, 1-2少云, 3阴, 45雾, 51+雨雪）
+  if (wcode !== null && wcode !== undefined) {
+    let dull = 0;
+    if (wcode >= 3 && wcode <= 4) dull = 0.25;
+    else if (wcode >= 5) dull = 0.35;
+    if (dull > 0) {
+      top  = lerpColor(top,  '#8a8a9a', dull);
+      mid  = lerpColor(mid,  '#8a8a9a', dull);
+      bottom = lerpColor(bottom,'#8a8a9a', dull);
+    }
+  }
+  return 'linear-gradient(160deg, ' + top + ' 0%, ' + mid + ' 35%, ' + bottom + ' 100%)';
+}
+
+// ============================================================
+//  天空更新引擎
+// ============================================================
+
+function getGreeting(h) {
+  if (h >= 5 && h < 9)   return { icon:'🌅', label:'早安' };
+  if (h >= 9 && h < 12)  return { icon:'☀️', label:'上午好' };
+  if (h >= 12 && h < 14) return { icon:'🌤️', label:'午好' };
+  if (h >= 14 && h < 17) return { icon:'🌞', label:'下午好' };
+  if (h >= 17 && h < 19) return { icon:'🌇', label:'傍晚好' };
+  if (h >= 19 && h < 23) return { icon:'🌆', label:'晚上好' };
+  return { icon:'🌙', label:'深夜好' };
+}
+
+let _cachedWCode = null;
+
+function updateSky() {
+  const now = new Date();
+  const elev = calcSolarElevation(MY_LAT, MY_LNG, now);
+  // body 类名控制星星/月亮/云朵显示
+  document.body.className = elev < -2 ? 'night' : 'day';
+  // 动态渐变
+  document.body.style.background = computeSkyGradient(elev, _cachedWCode);
+  // 问候语
+  const bj = getBJ();
+  const g = getGreeting(bj.h);
+  document.getElementById('timeIcon').textContent = g.icon;
+  document.getElementById('timePeriodLabel').textContent = g.label;
+}
+
+/** 获取天气（Open-Meteo，零注册零Key） */
+async function fetchWeather() {
+  try {
+    const r = await fetch(
+      'https://api.open-meteo.com/v1/forecast?latitude=' + MY_LAT + '&longitude=' + MY_LNG + '&current_weather=true',
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data && data.current_weather) {
+      _cachedWCode = data.current_weather.weathercode;
+      updateSky(); // 重新应用带天气的渐变
+    }
+  } catch(e) { /* 静默降级 */ }
+}
+
+// ============================================================
+//  星星生成（与V1完全一致的逻辑）
+// ============================================================
+(function() {
+  const container = document.getElementById('starsContainer');
+  for (let i = 0; i < 120; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    const size = Math.random() * 2.5 + 0.5;
+    star.style.cssText = `
+      left: ${Math.random() * 100}%;
+      top: ${Math.random() * 100}%;
+      width: ${size}px;
+      height: ${size}px;
+      --dur: ${(Math.random() * 3 + 2).toFixed(1)}s;
+      animation-delay: ${(Math.random() * 4).toFixed(1)}s;
+    `;
+    container.appendChild(star);
+  }
+})();
+
+// ============================================================
+//  云朵生成（棉絮状积云）
+// ============================================================
+(function() {
+  const container = document.getElementById('cloudsContainer');
+
+  // 积云模板：每个模板是 [cx, cy, r] 的相对坐标（相对于云簇中心）
+  const CLOUD_TEMPLATES = [
+    // 模板 0：大而蓬松
+    [[0, 0, 38], [20, -8, 30], [-18, -12, 28], [35, 5, 22], [-28, 2, 20],
+     [10, -20, 18], [-10, -22, 16], [28, -16, 14], [-35, -10, 12], [15, 10, 10]],
+    // 模板 1：偏长条
+    [[0, 0, 32], [25, -5, 28], [-22, -8, 26], [40, 3, 20], [-35, 0, 18],
+     [12, -18, 16], [-12, -16, 14], [30, -10, 12], [-28, -12, 10]],
+    // 模板 2：高耸
+    [[0, 0, 35], [18, -12, 28], [-16, -10, 26], [8, -25, 22], [-8, -20, 18],
+     [28, -2, 18], [-26, -2, 16], [32, -18, 12], [0, 12, 14], [-20, 12, 12]],
+    // 模板 3：小而圆
+    [[0, 0, 30], [15, -6, 24], [-14, -8, 22], [5, -18, 18], [-5, -14, 15],
+     [22, 2, 14], [-20, 2, 12], [10, 8, 10]]
+  ];
+
+  // 每朵云的参数
+  const cloudConfigs = [
+    { scale: 1.2, top: 20, delay: 0, duration: 90, template: 0 },
+    { scale: 1.5, top: 45, delay: -20, duration: 110, template: 1 },
+    { scale: 1.0, top: 10, delay: -40, duration: 75, template: 2 },
+    { scale: 1.3, top: 60, delay: -10, duration: 95, template: 3 },
+    { scale: 0.8, top: 30, delay: -55, duration: 65, template: 1 },
+    { scale: 1.1, top: 75, delay: -30, duration: 85, template: 0 },
+  ];
+
+  cloudConfigs.forEach(cfg => {
+    const cluster = document.createElement('div');
+    cluster.className = 'cloud-cluster';
+    const s = cfg.scale;
+    cluster.style.cssText = `
+      left: 0px;
+      top: ${cfg.top}px;
+      animation-duration: ${cfg.duration}s;
+      animation-delay: ${cfg.delay}s;
+    `;
+
+    const tmpl = CLOUD_TEMPLATES[cfg.template];
+    tmpl.forEach(([cx, cy, r]) => {
+      const bubble = document.createElement('div');
+      bubble.className = 'cloud-bubble';
+      const bs = r * s;
+      bubble.style.cssText = `
+        width: ${bs * 2}px;
+        height: ${bs * 2}px;
+        left: ${cx * s + 150 - bs}px;
+        top: ${cy * s - bs}px;
+      `;
+      cluster.appendChild(bubble);
+    });
+
+    container.appendChild(cluster);
+  });
+})();
+
+// ============================================================
+//  时间转人话
+// ============================================================
+function humanTime(iso) {
+  if (!iso) return null;
+  const t = new Date(iso);
+  if (isNaN(t.getTime())) return null;
+  const bj = new Date(t.getTime() + 8*3600000);
+  const nowBJ = new Date(new Date().getTime() + 8*3600000);
+  const diffMs = nowBJ - bj;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMin / 60);
+  const h = bj.getUTCHours(), m = bj.getUTCMinutes();
+  const pad = n => String(n).padStart(2,'0');
+  const hm = pad(h) + ':' + pad(m);
+  const p = h<6?'凌晨':h<9?'早上':h<12?'上午':h<13?'中午':h<18?'下午':h<20?'傍晚':'晚上';
+  if (diffMin < 5) return '刚刚';
+  if (diffMin < 60) return diffMin + '分钟前';
+  if (diffHr < 24 && bj.getUTCDate() === nowBJ.getUTCDate()) return '今天' + p + ' ' + hm;
+  if (diffHr < 48) return '昨天' + p + ' ' + hm;
+  return (bj.getUTCMonth()+1) + '/' + bj.getUTCDate() + ' ' + hm;
+}
+
+// ============================================================
+//  来源简写
+// ============================================================
+function shortSrc(s) {
+  return (s || '').replace(/\(@\w+\)/g, '').replace(/（RSS）/g, '').trim() || '未知';
+}
+
+// ============================================================
+//  数据获取（优先用嵌入数据，在线获取兜底）
+// ============================================================
+
+function getEmbeddedDaily() {
+  const el = document.getElementById('embeddedData');
+  if (!el) return null;
+  try { return JSON.parse(el.textContent); }
+  catch(e) { return null; }
+}
+
+async function fetchDaily() {
+  // 1) 嵌入数据（当天日期匹配）
+  const embedded = getEmbeddedDaily();
+  if (embedded && embedded.date === getBJ().isoDate) return embedded;
+
+  // 2) 在线获取（服务器可能无 CORS 头，走静默失败）
+  try {
+    const r = await fetch(
+      'https://aihot.virxact.com/api/public/daily/' + getBJ().yesterday(),
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (r.ok) {
+      const data = await r.json();
+      if (data && data.sections && data.sections.length > 0) return data;
+    }
+  } catch(e) { /* CORS 失败，静默降级 */ }
+
+  // 3) 兜底：用嵌入数据（即使日期不匹配）
+  if (embedded) return embedded;
+  return null;
+}
+
+// ============================================================
+//  渲染引擎
+// ============================================================
+const CAT_LABELS = { 'ai-models':'模型发布/更新', 'ai-products':'产品发布/更新', 'industry':'行业动态', 'paper':'论文研究', 'tip':'技巧与观点' };
+const SECTION_ICONS = { '模型发布/更新':'🤖', '产品发布/更新':'📦', '行业动态':'🏭', '论文研究':'📄', '技巧与观点':'💡' };
+const NAV_IDS = { '模型发布/更新':'model', '产品发布/更新':'product', '行业动态':'industry', '论文研究':'paper', '技巧与观点':'tip' };
+
+const RELEVANT_KW = [
+  '电商','ecommerce','shopify','商店','店铺','跨境','外贸',
+  '商品','广告','视频','文案','营销','seo','流量','客服',
+  'chatbot','品牌','内容','ugc','素材','推广','降价','成本',
+  '部署','claude','openclaw','自动化','效率','生产力','ai助手'
+];
+
+function isRel(title, summary) {
+  const t = (title || '').toLowerCase();
+  const s = (summary || '').toLowerCase();
+  return RELEVANT_KW.some(k => t.includes(k) || s.includes(k));
+}
+
+/** 生成"为什么对你有用"提示语 */
+function getRelevanceTip(item) {
+  const t = (item.title || '').toLowerCase();
+  const s = (item.summary || '').toLowerCase();
+  const text = t + ' ' + s;
+
+  if (text.includes('广告') || text.includes('ugc') || text.includes('素材')) return '你可以直接用 AI 生成商品广告素材，节省外包成本';
+  if (text.includes('客服') || text.includes('chatbot') || text.includes('stripe') || text.includes('支付')) return '你的 Shopify 店铺可以用 AI 客服降低售后人力';
+  if (text.includes('claude') || text.includes('cursor') || text.includes('编码') || text.includes('编程')) return '你正在用的 AI 编程工具，看看有什么新能力可以提升效率';
+  if (text.includes('电商') || text.includes('shopify') || text.includes('商品') || text.includes('店铺')) return '直接可以应用到你的外贸电商业务';
+  if (text.includes('免费') || text.includes('降价') || text.includes('成本')) return '免费的 AI 工具可以直接用起来，零成本试错';
+  if (text.includes('营销') || text.includes('seo') || text.includes('流量') || text.includes('推广')) return '营销和 SEO 最新工具，帮你获取更多客户';
+  if (text.includes('部署') || text.includes('自动化') || text.includes('效率')) return '提升运营效率的方法，适合你在业务中落地';
+  if (text.includes('模型') || text.includes('大模型') || text.includes('flash') || text.includes('gemini')) return '新模型发布，关注性价比看能否用到业务中';
+
+  return '和你的外贸电商业务场景相关';
+}
+
+/** 生成个人化摘要（对电商店主的视角） */
+function getPersonalizedSummary(item) {
+  const t = (item.title || '').toLowerCase();
+  const s = (item.summary || '').toLowerCase();
+  const text = t + ' ' + s;
+  const orig = (item.summary || '').replace(/https?:\/\/\S+/g, '').trim();
+
+  if (text.includes('广告') || text.includes('ugc') || text.includes('素材')) {
+    return '💡 对你说：AI 现在可以自动生成 UGC 风格的广告素材，你只需要定好产品简报和风格，它就能批量产出。适合你用在 Facebook/Instagram 的商品推广上，省掉找素材外包的时间和钱。';
+  }
+  if (text.includes('客服') || text.includes('chatbot') || text.includes('stripe') || text.includes('支付')) {
+    return '💡 对你说：你的 Shopify 店铺如果接上 AI 客服，可以自动处理退款查询、订单追踪、支付失败等常见问题，减少人工客服压力。Stripe 这次接入 Claude 就是个信号。';
+  }
+  if (text.includes('claude') || text.includes('cursor') || text.includes('编码') || text.includes('编程')) {
+    return '💡 对你说：你正在用 Claude Code，这条资讯是关于这些工具的最新能力对比。看看哪个模型在你常用的代码场景里表现更好，能直接提升你的开发效率。';
+  }
+  if (text.includes('免费') || text.includes('gorq')) {
+    return '💡 对你说：Gorq 现在可以免费调用 DeepSeek、Google、Mistral 等多个模型。你可以零成本测试不同模型在你业务场景下的效果，找到最适合的那个。';
+  }
+  if (text.includes('模型') || text.includes('大模型') || text.includes('gemini') || text.includes('flash')) {
+    return '💡 对你说：新模型发布，重点关注定价。$0.15/$0.60 每百万 token 这个价位是否适合用到你的智能客服或内容生成流程中，值得试试。';
+  }
+  if (text.includes('jimeng') || text.includes('字节') || text.includes('广告系统')) {
+    return '💡 对你说：字节跳动出的全流程广告生成系统，能根据你的产品信息和目标人群，自动产出广告创意+文案+投放策略。如果你在做 Facebook/Google 广告投放，这可以省大量测试时间。';
+  }
+
+  // 默认：保留原摘要但加上个人化开头
+  return '💡 ' + orig;
+}
+
+/** 判断链接是否通往 X/Twitter */
+function isXLink(url) {
+  if (!url) return false;
+  const u = url.toLowerCase();
+  return u.includes('x.com') || u.includes('twitter.com');
+}
+
+function render(data) {
+  let sections = data.sections;
+  if (!sections && data.items) {
+    const map = {};
+    data.items.forEach(it => {
+      const label = CAT_LABELS[it.category] || '技巧与观点';
+      if (!map[label]) map[label] = [];
+      map[label].push({
+        title: it.title,
+        summary: it.summary,
+        sourceUrl: it.url,
+        sourceName: it.source,
+        publishedAt: it.publishedAt
+      });
+    });
+    sections = Object.entries(map).map(([label,items]) => ({ label, items }));
+  }
+
+  const bj = getBJ();
+  const counts = {};
+  let total = 0;
+  (sections || []).forEach(s => {
+    counts[s.label] = (s.items || []).length;
+    total += counts[s.label];
+  });
+  const countsOrder = ['模型发布/更新','产品发布/更新','行业动态','论文研究','技巧与观点'];
+
+  document.getElementById('heroDate').textContent = `${bj.y}年${bj.m}月${bj.d}日（${bj.wd}）`;
+  document.getElementById('count-total').textContent = total;
+  countsOrder.forEach(k => {
+    const el = document.getElementById(`count-${NAV_IDS[k]||'other'}`);
+    if (el) el.textContent = counts[k] || 0;
+  });
+
+  // 月相信息
+  const phase = calcMoonPhase(new Date());
+  const pname = getMoonName(phase);
+  setMoonPhase(phase);
+
+  // 收集所有 items 并标记相关性
+  const allItems = [];
+  const relevantSet = new Set();
+  (sections || []).forEach(s => {
+    (s.items || []).forEach(it => {
+      const itemKey = it.title + it.sourceName;
+      const rel = isRel(it.title, it.summary);
+      allItems.push({ ...it, sectionLabel: s.label, relevant: rel });
+      if (rel) relevantSet.add(itemKey);
+    });
+  });
+  const relevantItems = allItems.filter(it => it.relevant);
+  const relCount = relevantItems.length;
+
+  document.getElementById('heroGreeting').innerHTML =
+    `今天 <strong style="color:#fff">${total}</strong> 条 AI 精选资讯，为你筛选出 ` +
+    `<span style="color:#f5a623">${relCount}</span> 条和你的业务直接相关的<br>` +
+    `<span style="font-size:13px;color:rgba(255,255,255,0.6)">今晚月相：${pname} · 按你的外贸电商背景定制呈现</span>`;
+
+  // 导航
+  const navBar = document.getElementById('navBar');
+  const navChips = countsOrder.filter(k => k in counts).map(k =>
+    `<a href="#section-${NAV_IDS[k]}" class="nav-chip">${SECTION_ICONS[k]} ${k} <span class="count-badge">${counts[k]}</span></a>`
+  );
+  if (relCount > 0) {
+    navChips.unshift(`<a href="#section-for-you" class="nav-chip" style="background:rgba(245,166,35,0.25);border-color:rgba(245,166,35,0.4)">🔥 对你最有用 <span class="count-badge" style="background:rgba(245,166,35,0.4)">${relCount}</span></a>`);
+  }
+  navBar.innerHTML = navChips.join('');
+
+  // ===== 正文卡片 =====
+  const content = document.getElementById('contentArea');
+  let html = '', globalIdx = 0;
+
+  // 第一步："🔥 对你最有用" 专属版块
+  if (relevantItems.length > 0) {
+    html += `<section id="section-for-you">
+      <div class="section-header">
+        <span class="section-icon">🔥</span>
+        <span class="section-title">对你最有用</span>
+        <span class="section-count">${relevantItems.length}条</span>
+        <div class="section-divider"></div>
+      </div>
+      <div class="cards-grid">`;
+
+    relevantItems.forEach(it => {
+      globalIdx++;
+      const personalSummary = getPersonalizedSummary(it);
+      const sectionIcon = SECTION_ICONS[it.sectionLabel] || '📌';
+      const linkWarning = isXLink(it.sourceUrl) ? ' <span style="color:#e74c3c;font-size:10px">(X 链接 · 谨慎点击)</span>' : '';
+      html += `<div class="card relevant" data-animate>
+        <div class="card-top">
+          <div class="card-num" style="background:linear-gradient(135deg,#f5a623,#e07b1a)">${globalIdx}</div>
+          <span class="card-source-chip">${sectionIcon} ${it.sectionLabel}</span>
+        </div>
+        <div class="card-title">${it.title || '无标题'}</div>
+        <div class="card-summary" style="color:#2d3748">${personalSummary}</div>
+        <div class="card-footer" style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:#94a3b8">来自 ${shortSrc(it.sourceName || it.source)}${linkWarning}</span>
+          <a class="card-link" href="${it.sourceUrl || it.url || '#'}" target="_blank" rel="noopener noreferrer">查看原文 →</a>
+        </div>
+      </div>`;
+    });
+    html += `</div></section>`;
+  }
+
+  // 第三步：按分类展示其余资讯（相关的不重复展示）
+  (sections || []).forEach(s => {
+    const items = (s.items || []).filter(it => !relevantSet.has(it.title + it.sourceName));
+    if (items.length === 0 && s.items && s.items.length > 0) {
+      // 全都标为相关了→跳过
+      return;
+    }
+    const id = NAV_IDS[s.label] || 'other';
+    html += `<section id="section-${id}">
+      <div class="section-header">
+        <span class="section-icon">${SECTION_ICONS[s.label]||'📌'}</span>
+        <span class="section-title">${s.label}</span>
+        <span class="section-count">${items.length}条</span>
+        <div class="section-divider"></div>
+      </div>
+      <div class="cards-grid">`;
+
+    if (items.length === 0) {
+      html += `<div class="empty-section">暂无资讯</div>`;
+    } else {
+      items.forEach(it => {
+        globalIdx++;
+        html += `<div class="card" data-animate>
+          <div class="card-top">
+            <div class="card-num">${globalIdx}</div>
+            <span class="card-source-chip">${shortSrc(it.sourceName || it.source)}</span>
+          </div>
+          <div class="card-title">${it.title || '无标题'}</div>
+          <div class="card-time">${humanTime(it.publishedAt) ? '🕐 '+humanTime(it.publishedAt) : ''}</div>
+          <div class="card-summary">${(it.summary || '暂无摘要').replace(/https?:\/\/\S+/g, '').trim()}</div>
+          <div class="card-footer">
+            <a class="card-link" href="${it.sourceUrl || it.url || '#'}" target="_blank" rel="noopener noreferrer">阅读原文 →</a>
+          </div>
+        </div>`;
+      });
+    }
+    html += `</div></section>`;
+  });
+
+  // 快讯
+  if (data.flashes && data.flashes.length > 0) {
+    html += `<section>
+      <div class="section-header">
+        <span class="section-icon">⚡</span>
+        <span class="section-title">快讯</span>
+        <span class="section-count">${data.flashes.length}条</span>
+        <div class="section-divider"></div>
+      </div>
+      <div class="cards-grid">`;
+    data.flashes.forEach(f => {
+      globalIdx++;
+      html += `<div class="card" data-animate>
+        <div class="card-top"><div class="card-num">${globalIdx}</div>
+        <span class="card-source-chip">${shortSrc(f.sourceName || f.source)}</span></div>
+        <div class="card-title">${f.title || '无标题'}</div>
+        <div class="card-footer">
+          <a class="card-link" href="${f.sourceUrl || f.url || '#'}" target="_blank" rel="noopener noreferrer">阅读原文 →</a>
+        </div></div>`;
+    });
+    html += `</div></section>`;
+  }
+
+  content.innerHTML = html;
+
+  document.getElementById('footer').innerHTML = `
+    <p>今日共收录 <strong style="color:rgba(255,255,255,0.9)">${total}</strong> 条 AI 精选资讯 · 数据来源 <a href="https://aihot.virxact.com" target="_blank" rel="noopener noreferrer">aihot.virxact.com</a></p>
+    <p style="margin-top:6px">⭐ 标注"与你相关"的资讯为根据外贸电商背景优先筛选 · ${bj.y}年${bj.m}月${bj.d}日</p>
+  `;
+
+  // 滚入动画
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('[data-animate]').forEach(el => observer.observe(el));
+
+  // 锚点平滑滚动
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const t = document.querySelector(a.getAttribute('href'));
+      if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
+// ============================================================
+//  主流程
+// ============================================================
+async function main() {
+  // 动态天空
+  updateSky();
+
+  // 天气获取（异步取到后自动重绘）
+  fetchWeather();
+
+  // 定时更新天空渐变（每3分钟）
+  setInterval(updateSky, 180000);
+
+  // 定时更新天气（每30分钟）
+  setInterval(function() { fetchWeather(); }, 1800000);
+
+  // 设置月相（无论night/day都计算，CSS控制显示隐藏）
+  setMoonPhase(calcMoonPhase(new Date()));
+
+  try {
+    const data = await fetchDaily();
+    if (!data || (!data.sections && !data.items)) throw new Error('无数据');
+    render(data);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('contentArea').innerHTML = `
+      <div class="error-state">
+        <div class="error-icon">😅</div>
+        <p>数据获取失败了</p>
+        <p style="font-size:12px;margin-top:8px;color:rgba(255,255,255,0.5)">${err.message || ''}</p>
+        <a class="retry-btn" onclick="location.reload()">重新加载</a>
+      </div>`;
+    document.getElementById('heroGreeting').innerHTML = '暂时无法获取今日日报，请稍后重试';
+  }
+}
+
+main();
+</script>
+</body>
+</html>
