@@ -223,7 +223,7 @@
     margin-bottom: 8px;
   }
   .tier-3-wrapper.expanded .tier3-card {
-    margin-bottom: 280px;
+    margin-bottom: 680px;
   }
   .tier-3-wrapper.expanded .tier3-card:last-child {
     margin-bottom: 8px;
@@ -618,7 +618,10 @@ function render(data) {
 
   // ===== 第三级：存档层 =====
   if (tier3.length > 0) {
-    html += '<section><div class="section-header"><span class="section-icon">🌐</span><span class="section-title">行业全景</span><span class="section-count">'+tier3.length+'条</span><div class="section-divider"></div></div>';
+    html += '<section>';
+    // 哨兵元素：固定在标题区顶部，用于 IntersectionObserver 感知用户是否滚回来了
+    html += '<div id="tier3Sentinel" style="height:1px;"></div>';
+    html += '<div class="section-header"><span class="section-icon">🌐</span><span class="section-title">行业全景</span><span class="section-count">'+tier3.length+'条</span><div class="section-divider"></div></div>';
     html += '<div class="tier-3-wrapper collapsed" id="tier3Wrapper"><div class="cards-grid">';
     var t3idx = tier1.length + tier2.length;
     tier3.forEach(function(it, i) {
@@ -659,28 +662,64 @@ function render(data) {
 }
 
 // ============================================================
-//  三级展开/折叠
+//  三级展开/折叠 + 滚回自动收起
 // ============================================================
+var tier3AutoCollapseObserver = null;
+
+function collapseTier3() {
+  var wrapper = document.getElementById('tier3Wrapper');
+  var btn = document.getElementById('tier3ExpandBtn');
+  if (!wrapper || !btn) return;
+  if (!wrapper.classList.contains('expanded')) return;
+  wrapper.classList.add('collapsed');
+  wrapper.classList.remove('expanded');
+  btn.classList.remove('expanded');
+  var count = wrapper.querySelectorAll('.tier3-card').length;
+  btn.innerHTML = '<span class="arrow">↓</span> 展开剩余 '+count+' 条';
+  // 停止监听
+  if (tier3AutoCollapseObserver) {
+    tier3AutoCollapseObserver.disconnect();
+    tier3AutoCollapseObserver = null;
+  }
+}
+
 function toggleTier3() {
   var wrapper = document.getElementById('tier3Wrapper');
   var btn = document.getElementById('tier3ExpandBtn');
   if (!wrapper || !btn) return;
   var isCollapsed = wrapper.classList.contains('collapsed');
   if (isCollapsed) {
+    // 展开
     wrapper.classList.remove('collapsed');
     wrapper.classList.add('expanded');
     btn.classList.add('expanded');
-    btn.innerHTML = '<span class="arrow">↑</span> 收起';
-    // 滚动到按钮位置
-    setTimeout(function() {
-      btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
+    btn.innerHTML = '<span class="arrow">↓</span> 重新折叠';
+    // 启动 IntersectionObserver：监听触发哨兵元素（行业全景标题区上方）
+    // 当哨兵重新进入视口（用户滚回来），自动折叠
+    var sentinel = document.getElementById('tier3Sentinel');
+    if (sentinel && 'IntersectionObserver' in window) {
+      // 先断开旧的
+      if (tier3AutoCollapseObserver) tier3AutoCollapseObserver.disconnect();
+      // 延迟 800ms 再启动监听，避免刚展开就触发折叠
+      setTimeout(function() {
+        tier3AutoCollapseObserver = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            // 哨兵重新出现在视口中（用户向上滚回来了）
+            if (entry.isIntersecting) {
+              collapseTier3();
+            }
+          });
+        }, {
+          root: null,
+          // 只在哨兵从下方消失后再回到视口时触发（顶部 0px 边界）
+          rootMargin: '0px 0px -80% 0px',
+          threshold: 0
+        });
+        tier3AutoCollapseObserver.observe(sentinel);
+      }, 800);
+    }
   } else {
-    wrapper.classList.add('collapsed');
-    wrapper.classList.remove('expanded');
-    btn.classList.remove('expanded');
-    var count = wrapper.querySelectorAll('.tier3-card').length;
-    btn.innerHTML = '<span class="arrow">↓</span> 展开剩余 '+count+' 条';
+    collapseTier3();
   }
 }
 
