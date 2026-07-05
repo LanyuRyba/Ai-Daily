@@ -550,6 +550,15 @@ function humanTime(iso) {
 function shortSrc(s) { return (s||'').replace(/\(@\w+\)/g,'').replace(/（RSS）/g,'').trim()||'未知'; }
 function isXLink(url) { if(!url)return false; const u=url.toLowerCase(); return u.includes('x.com')||u.includes('twitter.com'); }
 
+// 显示日期：优先使用数据中的 date 字段（反映资讯实际日期），无数据时回退到当前时间
+function formatDataDate(dateStr) {
+  if (!dateStr) { var fb=getBJ(); return fb.y+'年'+fb.m+'月'+fb.d+'日（'+fb.wd+'）'; }
+  var parts=dateStr.split('-');
+  var d=new Date(Date.UTC(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2])));
+  var wds=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+  return parts[0]+'年'+parseInt(parts[1])+'月'+parseInt(parts[2])+'日（'+wds[d.getUTCDay()]+'）';
+}
+
 // X 来源卡片展开/收起
 function toggleXCard(btn) {
   var card = btn.closest('.card');
@@ -583,10 +592,10 @@ function render(data) {
     return;
   }
 
-  var bj = getBJ();
+  var dataDateStr = formatDataDate(data.date);
   var counts = {}, total = 0;
   sections.forEach(function(s) { counts[s.label] = (s.items||[]).length; total += counts[s.label]; });
-  document.getElementById('heroDate').textContent = bj.y+'年'+bj.m+'月'+bj.d+'日（'+bj.wd+'）';
+  document.getElementById('heroDate').textContent = dataDateStr;
   document.getElementById('count-total').textContent = total;
   COUNTS_ORDER.forEach(function(k) {
     var el = document.getElementById('count-'+(NAV_IDS[k]||'other'));
@@ -696,7 +705,7 @@ function render(data) {
   content.innerHTML = html;
 
   // 页脚
-  document.getElementById('footer').innerHTML = '<p>今日共收录 <strong style="color:rgba(255,255,255,0.9)">'+total+'</strong> 条 AI 精选资讯 · 三层注意力保护设计</p><p style="margin-top:6px">🔥 必读层 '+tier1.length+'条 · 📋 浏览层 '+tier2.length+'条 · 🌐 存档层 '+tier3.length+'条 · '+bj.y+'年'+bj.m+'月'+bj.d+'日</p>';
+  document.getElementById('footer').innerHTML = '<p>今日共收录 <strong style="color:rgba(255,255,255,0.9)">'+total+'</strong> 条 AI 精选资讯 · 三层注意力保护设计</p><p style="margin-top:6px">🔥 必读层 '+tier1.length+'条 · 📋 浏览层 '+tier2.length+'条 · 🌐 存档层 '+tier3.length+'条 · '+dataDateStr+'</p>';
 
   // 滚入动画
   var observer = new IntersectionObserver(function(entries) {
